@@ -1,0 +1,13 @@
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\Sezame.dll.config
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\Sezame.dll
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\Sezame.pdb
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\Newtonsoft.Json.dll
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\System.Net.Http.Extensions.dll
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\System.Net.Http.Primitives.dll
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\Newtonsoft.Json.xml
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\System.Net.Http.Extensions.xml
+C:\Projects\SezameFinal\Sezame\Sezame\bin\Debug\System.Net.Http.Primitives.xml
+C:\Projects\SezameFinal\Sezame\Sezame\obj\Debug\Sezame.csproj.App.config
+C:\Projects\SezameFinal\Sezame\Sezame\obj\Debug\Sezame.csprojResolveAssemblyReference.cache
+C:\Projects\SezameFinal\Sezame\Sezame\obj\Debug\Sezame.dll
+C:\Projects\SezameFinal\Sezame\Sezame\obj\Debug\Sezame.pdb
