@@ -28,7 +28,9 @@ done by sending the register call using your recovery e-mail entered during the 
 process.
 You'll get an authentication request on your Sezame app, which must be authorized.
 
-```c#  
+```c#
+var email = "your recovery email";
+var applicationName = "my dotnet app";
 var invoker = new SezameRegistrationServiceInvoker();
 var response = await invoker.RegisterAsync(email, applicationName);
 clientcode = response.GetParameter(SezameResultKey.ClientCode);
@@ -37,15 +39,62 @@ sharedsecret = response.GetParameter(SezameResultKey.SharedSecret);
 
 ### sign
 
-After you have authorized the registration on your mobile device you can request the certificate.
+After you have authorized the registration on your mobile device you can request the certificate, yout have to build a certificate signing request containing the clientcode as CN:
 
-```php
+```c#
+string certparams = "CN=" + clientcode + ",E=" + email + ",C=AT,L=Vienna,ST=Austria,O=-,OU=-";
+X509Name name = new X509Name(certparams);
 
+RsaKeyPairGenerator rkpg = new RsaKeyPairGenerator();
+rkpg.Init(new KeyGenerationParameters(new SecureRandom(), 2048));
+keyPair = rkpg.GenerateKeyPair();
+
+Pkcs10CertificationRequest csr = new Pkcs10CertificationRequest("SHA512WITHRSA", name, keyPair.Public, null, keyPair.Private);
+
+StringBuilder stringBuilder = new StringBuilder();
+PemWriter premWriter = new PemWriter(new StringWriter(stringBuilder));
+premWriter.WriteObject(csr);
+premWriter.Writer.Flush();
+string pemCertificationRequest = stringBuilder.ToString();
 ```
-Store the certificate and the private key within your system, it is recommended to protect your
-private key with a secure passphrase.
-The certificate and the private key is needed for subsequent calls to the Sezame servers, sign
-and register are the only two calls which can be used without the client certificate.
+
+after building the CSR send it to the sezame HQ server, you will get a certificate back, you have to store the certificate together with your private key in the windows certificate store. You have to convert the BounceCastle private key to a RSACryptoServiceProvider. This part is tricky!!
+
+```c#
+var invoker = new SezameRegistrationServiceInvoker();
+var response = await invoker.SignAsync(pemCertificationRequest, sharedsecret);
+pemCertificate = response.GetParameter(SezameResultKey.Certificate);
+
+pemCertificate = Regex.Replace(pemCertificate, "-----BEGIN CERTIFICATE-----", "");
+pemCertificate = Regex.Replace(pemCertificate, "-----END CERTIFICATE-----", "");
+var certificateByteData = Convert.FromBase64String(pemCertificate);
+
+AsymmetricKeyParameter privateKey = keyPair.Private;
+
+// Convert X509Certificate to X509Certificate2
+certificate = new X509Certificate2(certificateByteData, "test", X509KeyStorageFlags.Exportable);
+
+// Convert BouncyCastle Private Key to RSA
+var rsaPriv = DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters)keyPair.Private);
+
+// Setup RSACryptoServiceProvider with "KeyContainerName" set
+
+var csp = new CspParameters();
+csp.KeyContainerName = "KeyContainer";
+var rsaPrivate = new RSACryptoServiceProvider(csp);
+
+// Import private key from BouncyCastle's rsa
+rsaPrivate.ImportParameters(rsaPriv.ExportParameters(true));
+
+// Set private key on our X509Certificate2
+certificate.PrivateKey = rsaPrivate;
+
+var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+store.Open(OpenFlags.ReadWrite);
+store.Add(certificate);
+store.Close();
+```
+
 
 ### pair
 
