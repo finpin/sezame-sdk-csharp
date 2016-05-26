@@ -116,7 +116,7 @@ var id = linkResponse.GetParameter(SezameResultKey.Id);
 var clientcode = linkResponse.GetParameter(SezameResultKey.ClientCode);
 ```
 
-with the username, id and clientcode build a qrcode:
+with the username, id and clientcode build a qrcode (using ZXing and Newtonsoft.JSON):
 
 ```c#
 var data = JsonConvert.SerializeObject(new
@@ -142,42 +142,75 @@ using (var bitmap = writer.Write(data))
 }
 ```
 
+
+
 ### auth
 
 To authenticate users with Sezame, use the auth call.
 
 ```php
+var webRequestHandler = new WebRequestHandler();
+webRequestHandler.ClientCertificates.Add(certificate); // X509Certificate
+var invoker = new SezameAuthenticationServiceInvoker(webRequestHandler, true);
 
+SezameResult response = null;
+var timeout = TimeSpan.FromSeconds(60);
+response = await invoker.RequestAuthenticationAsync(username, message, "auth", (int)Math.Ceiling(timeout.TotalMinutes));
+var status = response.GetParameter(SezameResultKey.AuthenticationStatus);
+if (status == "notlinked")
+{
+    callback(SezameAuthenticationResultKey.NotPaired);
+    return;
+}
+
+var authId = response.GetParameter(SezameResultKey.Id);
+
+var result = SezameAuthenticationResultKey.Timedout;
+if (status == "initiated")
+{
+    result = await Task.Run<SezameAuthenticationResultKey>(async () =>
+    {
+        int sleeptime = 1000;
+        int loopPassCount = (int)Math.Ceiling(Math.Ceiling((double)timeout.TotalMilliseconds) / sleeptime);
+        while (loopPassCount > 0)
+        {
+            response = await invoker.CheckAuthenticationStatusAsync(authId);
+            status = response.GetParameter(SezameResultKey.AuthenticationStatus);
+            if (status == "authorized")
+            {
+                return SezameAuthenticationResultKey.Authenticated;
+            }
+            else if (status == "denied")
+            {
+                return SezameAuthenticationResultKey.Denied;
+            }
+            loopPassCount--;
+            System.Threading.Thread.Sleep(sleeptime);
+        }
+        return SezameAuthenticationResultKey.Timedout;
+    });
+}
 
 ```
 
-### fraud
-
-It is possible to inform users about fraud attempts, this request could be send, if the user logs in
-using the password.
-
-```php
-
-
-```
 
 ### cancel
 
 To disable the service use the cancel call, no further requests will be accepted by the Sezame
 servers:
 
-```php
+```c#
+var webRequestHandler = new WebRequestHandler();
+webRequestHandler.ClientCertificates.Add(certificate); // X509Certificate
+var invoker = new SezameRegistrationServiceInvoker(webRequestHandler, true);
+await invoker.CancelAsync();
 
+var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+store.Open(OpenFlags.ReadWrite);
+store.Remove(certificate);
+store.Close();
 ```
-
-### error handling
-
-The Sezame Lib throws exceptions in the case of an error.
-
-```php
-
-
-```
+This snippet also removes the certificate from the certificate store
 
 
 ## License
