@@ -27,6 +27,7 @@ To be able to connect to the Sezame HQ server, you have to register your client/
 done by sending the register call using your recovery e-mail entered during the app installation
 process.
 You'll get an authentication request on your Sezame app, which must be authorized.
+You'll get back a clientcode this is the identifiert for your application.
 
 ```c#
 var email = "your recovery email";
@@ -95,14 +96,50 @@ store.Add(certificate);
 store.Close();
 ```
 
+In this example the certificate is store in within the CurrentUser context, it is possible to use the LocalMachine context, but you have to grant access rights to you application, or run your application as administrator.
+
+You could also save the certificate and private key into a .p12 certstore file.
 
 ### pair
 
 Once you have successfully obtained the client certificate, let your customers pair their devices
 with your application, this is done by displaying a QR code which is read by the Sezame app.
 
-```php
+```c#
+var username = "my application username";
+var webRequestHandler = new WebRequestHandler();
+webRequestHandler.ClientCertificates.Add(certificate); // X509Certificate
+var invoker = new SezameAuthenticationServiceInvoker(webRequestHandler, true);
 
+var linkResponse = await invoker.LinkAsync(username);
+var id = linkResponse.GetParameter(SezameResultKey.Id);
+var clientcode = linkResponse.GetParameter(SezameResultKey.ClientCode);
+```
+
+with the username, id and clientcode build a qrcode:
+
+```c#
+var data = JsonConvert.SerializeObject(new
+{
+    id = id,
+    username = username.Text,
+    client = clientcode
+});
+
+var writer = new BarcodeWriter
+{
+    Format = BarcodeFormat.QR_CODE,
+    Options = new EncodingOptions { Width = 500, Height = 500, Margin = 10 }
+};
+
+using (var bitmap = writer.Write(data))
+{
+    using (var stream = new MemoryStream())
+    {
+        bitmap.Save(stream, ImageFormat.Png);
+        var img = Image.FromStream(stream);
+    }
+}
 ```
 
 ### auth
