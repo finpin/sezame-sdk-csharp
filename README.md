@@ -142,8 +142,6 @@ using (var bitmap = writer.Write(data))
 }
 ```
 
-
-
 ### auth
 
 To authenticate users with Sezame, use the auth call.
@@ -212,6 +210,23 @@ store.Close();
 ```
 This snippet also removes the certificate from the certificate store
 
+### read the certificate from the store 
+
+To be able to find your certificate in the certificate store use the clientcode as identifier:
+
+```c#
+var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+store.Open(OpenFlags.ReadOnly);
+foreach (var cert in store.Certificates)
+{
+    if (cert.GetNameInfo(X509NameType.DnsName, false) == clientcode)
+    {
+        certificate = cert;
+        break;
+    }
+}
+store.Close();
+```
 
 ## License
 
